@@ -1,0 +1,58 @@
+"use client";
+
+// Mapa coropletico dos municipios da Bahia, colorido pelo Indice de Penumbra.
+// Cada municipio pode ser clicado para abrir a sua ficha. O componente busca o
+// GeoJSON leve gerado pelo pipeline e o desenha sobre um mapa base escuro.
+
+import { useEffect, useState } from "react";
+import { GeoJSON, MapContainer, TileLayer } from "react-leaflet";
+import type { Feature, FeatureCollection } from "geojson";
+import type { Layer, PathOptions } from "leaflet";
+import { useRouter } from "next/navigation";
+
+import "leaflet/dist/leaflet.css";
+import { corDoIndice } from "@/lib/cores";
+
+const LIMITES_BAHIA: [[number, number], [number, number]] = [
+  [-18.6, -47.0],
+  [-8.2, -37.0],
+];
+
+export default function MapaPenumbra() {
+  const [geo, setGeo] = useState<FeatureCollection | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetch("/data/municipios.geojson")
+      .then((r) => r.json())
+      .then(setGeo)
+      .catch(() => setGeo(null));
+  }, []);
+
+  function estilo(feature?: Feature): PathOptions {
+    const indice = (feature?.properties?.indice_penumbra as number) ?? 0;
+    return {
+      fillColor: corDoIndice(indice),
+      weight: 0.4,
+      color: "#0f1117",
+      fillOpacity: 0.85,
+    };
+  }
+
+  function porFeature(feature: Feature, layer: Layer) {
+    const p = feature.properties as Record<string, unknown>;
+    const indice = Number(p.indice_penumbra ?? 0);
+    layer.bindTooltip(`${p.nome}, índice ${indice.toFixed(0)}, nº ${p.rank_penumbra}`, { sticky: true });
+    layer.on("click", () => router.push(`/municipio/${p.cod_ibge}`));
+  }
+
+  return (
+    <MapContainer bounds={LIMITES_BAHIA} scrollWheelZoom className="h-[70vh] w-full rounded-lg">
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+      />
+      {geo && <GeoJSON data={geo} style={estilo} onEachFeature={porFeature} />}
+    </MapContainer>
+  );
+}

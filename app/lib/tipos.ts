@@ -1,0 +1,62 @@
+// Tipos que descrevem os dados gerados pelo pipeline e consumidos pelo site.
+
+export type Subescores = {
+  carencia_renda: number;
+  carencia_servico: number;
+  gap_capacidade_orcamentaria: number;
+  distancia_capital: number;
+  densidade_baixa: number;
+  populacao_pequena: number;
+};
+
+export type Municipio = {
+  cod_ibge: string;
+  nome: string;
+  microrregiao: string;
+  mesorregiao: string;
+  regiao_imediata: string | null;
+  regiao_intermediaria: string | null;
+  zona_cacaueira: boolean;
+  populacao_2022: number | null;
+  area_km2: number | null;
+  densidade_hab_km2: number | null;
+  pib_per_capita: number | null;
+  idhm_2010: number | null;
+  ideb_ai_2023: number | null;
+  mortalidade_infantil_2010: number | null;
+  autonomia_fiscal: number | null;
+  investimento_pc: number | null;
+  distancia_capital_km: number | null;
+  enviou_dca: boolean;
+  indice_penumbra: number;
+  indice_penumbra_pesos_iguais: number;
+  rank_penumbra: number;
+  subescores: Subescores;
+  imputados: string[];
+};
+
+export type Fonte = { nome: string; url: string; ano: string };
+
+export type Meta = {
+  versao: string;
+  gerado_em: string;
+  uf: string;
+  n_municipios: number;
+  pesos: Record<keyof Subescores, number>;
+  fontes: Fonte[];
+};
+
+export type IndiceData = {
+  meta: Meta;
+  municipios: Municipio[];
+};
+
+// rotulos legiveis dos seis sinais, usados em telas e legendas
+export const ROTULO_SINAL: Record<keyof Subescores, string> = {
+  carencia_renda: "Carência de renda",
+  carencia_servico: "Carência de serviço",
+  gap_capacidade_orcamentaria: "Falta de orçamento próprio",
+  distancia_capital: "Distância da capital",
+  densidade_baixa: "Baixa densidade",
+  populacao_pequena: "População pequena",
+};
