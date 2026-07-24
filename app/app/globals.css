@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #0f1117;
+  color: #e7e9ee;
+}
+
+/* o mapa do Leaflet precisa ocupar a altura do seu contêiner */
+.leaflet-container {
+  background: #0f1117;
+  font-family: inherit;
+}
+
+/* deixa os controles do Leaflet coerentes com o tema escuro */
+.leaflet-bar a,
+.leaflet-control-zoom a {
+  background: #171a22;
+  color: #e7e9ee;
+  border-color: #252a36;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #171a22;
+  color: #e7e9ee;
+}
