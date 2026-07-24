@@ -1,0 +1,31 @@
+# Node e Next (site)
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Python (pipeline)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Cache e dados brutos do pipeline (regeneráveis; os artefatos finais ficam em app/public/data)
+pipeline/data/raw/
+pipeline/data/processed/
+
+# Segredos e ambiente
+.env
+.env.*
+
+# Ferramentas de IA e editores
+.claude/
+CLAUDE.md
+.cursor/
+.idea/
+.vscode/
+
+# Sistema
+.DS_Store
+Thumbs.db
