@@ -1,0 +1,8 @@
+{
+  "carencia_renda": 0.22,
+  "carencia_servico": 0.19,
+  "gap_capacidade_orcamentaria": 0.20,
+  "distancia_capital": 0.14,
+  "densidade_baixa": 0.13,
+  "populacao_pequena": 0.12
+}

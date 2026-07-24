@@ -1,0 +1,33 @@
+{
+  "uf": "BA",
+  "uf_codigo": "29",
+  "capital_codigo": "2927408",
+  "ibge": {
+    "localidades_municipios": "https://servicodados.ibge.gov.br/api/v1/localidades/estados/{uf}/municipios",
+    "malha_geojson": "https://servicodados.ibge.gov.br/api/v3/malhas/estados/{uf}?formato=application/vnd.geo+json&intrarregiao=municipio&qualidade=intermediaria",
+    "sidra_censo2022": { "agregado": "4714", "periodo": "2022", "variaveis": "93|6318|614" },
+    "sidra_pib": { "agregado": "5938", "periodo": "2021", "variavel": "37" }
+  },
+  "ipea": {
+    "base": "http://www.ipeadata.gov.br/api/odata4/ValoresSerie(SERCODIGO='{serie}')",
+    "series": { "idhm": "ADH_IDHM", "mortalidade_infantil": "ADH_MORT1" },
+    "ano": "2010"
+  },
+  "inep": {
+    "ideb_ai_zip": "https://download.inep.gov.br/ideb/resultados/divulgacao_anos_iniciais_municipios_2023.zip",
+    "aba": "IDEB_AI_MUNICIPIOS",
+    "coluna_valor": "VL_OBSERVADO_2023"
+  },
+  "siconfi": {
+    "entes": "https://apidatalake.tesouro.gov.br/ords/siconfi/tt/entes",
+    "dca": "https://apidatalake.tesouro.gov.br/ords/siconfi/tt/dca",
+    "ano": "2022",
+    "anexo_receitas": "DCA-Anexo I-C",
+    "anexo_despesas": "DCA-Anexo I-D",
+    "conta_investimento": "4.4.00.00.00.00 - Investimentos"
+  },
+  "zona_cacaueira": {
+    "descricao": "Regiao cacaueira do Sul Baiano, coracao da lavoura de cacau que decaiu apos a vassoura-de-bruxa",
+    "microrregioes": ["Ilhéus-Itabuna", "Valença"]
+  }
+}
