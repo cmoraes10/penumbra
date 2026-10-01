@@ -68,16 +68,16 @@ def _municipality(cod: str, row: pd.Series) -> dict:
     }
 
 
-def export_index(df: pd.DataFrame, pesos: dict, config: dict, gerado_em: str, fontes: list[dict]) -> Path:
+def export_index(df: pd.DataFrame, weights: dict, config: dict, generated_at: str, sources: list[dict]) -> Path:
     """Writes indice.json with metadata and the full municipality list."""
     dados = {
         "meta": {
             "versao": "1.0.0",
-            "gerado_em": gerado_em,
+            "generated_at": generated_at,
             "uf": config["uf"],
             "n_municipalitys": int(len(df)),
-            "pesos": pesos,
-            "fontes": fontes,
+            "weights": weights,
+            "sources": sources,
         },
         "municipios": [_municipality(cod, row) for cod, row in df.iterrows()],
     }
@@ -86,11 +86,11 @@ def export_index(df: pd.DataFrame, pesos: dict, config: dict, gerado_em: str, fo
     return dest
 
 
-def export_geojson(df: pd.DataFrame, malha: dict) -> Path:
+def export_geojson(df: pd.DataFrame, mesh: dict) -> Path:
     """Enriches the simplified mesh with the score and writes municipios.geojson."""
     indexado = df
     features = []
-    for feature in malha["features"]:
+    for feature in mesh["features"]:
         cod = feature["properties"]["cod_ibge"]
         if cod not in indexado.index:
             continue
@@ -105,7 +105,7 @@ def export_geojson(df: pd.DataFrame, malha: dict) -> Path:
         }
         features.append(feature)
 
-    malha["features"] = features
+    mesh["features"] = features
     dest = OUTPUT / "municipios.geojson"
-    save_json(malha, dest)
+    save_json(mesh, dest)
     return dest

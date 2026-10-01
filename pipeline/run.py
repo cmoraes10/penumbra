@@ -60,13 +60,13 @@ def _quality_report(df: pd.DataFrame) -> None:
 
 def main() -> None:
     config = load_config("fontes.json")
-    pesos = load_config("pesos.json")
+    weights = load_config("weights.json")
 
     print("1/7 municipalities (backbone)")
     base = fetch_municipalities(config)
 
     print("2/7 population, area, density, and GDP (IBGE)")
-    censo_pib = fetch_census_and_gdp(config)
+    census_gdp = fetch_census_and_gdp(config)
 
     print("3/7 HDI and infant mortality (IPEA)")
     ipea = fetch_hdi_mortality(config)
@@ -75,22 +75,22 @@ def main() -> None:
     ideb = fetch_ideb(config)
 
     print("5/7 municipal finances (SICONFI)")
-    financas = fetch_finances(config)
+    finances = fetch_finances(config)
 
     print("6/7 geometry and distance to capital")
-    distancias = compute_distances(config)
-    malha = simplified_mesh(config)
+    distances = compute_distances(config)
+    mesh = simplified_mesh(config)
 
     print("7/7 building index and exporting")
-    df = build_index(base, censo_pib, ipea, ideb, financas, distancias, pesos)
+    df = build_index(base, census_gdp, ipea, ideb, finances, distances, weights)
 
-    gerado_em = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    caminho_indice = export_index(df, pesos, config, gerado_em, FONTES)
-    caminho_geojson = export_geojson(df, malha)
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    index_path = export_index(df, weights, config, generated_at, FONTES)
+    geojson_path = export_geojson(df, mesh)
 
     _quality_report(df)
-    print(f"\nindex: {caminho_indice}")
-    print(f"geojson: {caminho_geojson}")
+    print(f"\nindex: {index_path}")
+    print(f"geojson: {geojson_path}")
     print("\ntop 5 in penumbra:")
     print(df[["nome", "indice_penumbra", "zona_cacaueira"]].head())
 

@@ -24,16 +24,16 @@ OPACITY_SCORE = 0.85
 
 def build_index(
     base: pd.DataFrame,
-    censo_pib: pd.DataFrame,
+    census_gdp: pd.DataFrame,
     ipea: pd.DataFrame,
     ideb: pd.DataFrame,
-    financas: pd.DataFrame,
-    distancias: dict[str, float],
-    pesos: dict[str, float],
+    finances: pd.DataFrame,
+    distances: dict[str, float],
+    weights: dict[str, float],
 ) -> pd.DataFrame:
     """Returns the final municipality table with index, sub-scores, and flags."""
-    df = base.join([censo_pib, ipea, ideb, financas], how="left")
-    df["distancia_capital_km"] = pd.Series(distancias)
+    df = base.join([census_gdp, ipea, ideb, finances], how="left")
+    df["distancia_capital_km"] = pd.Series(distances)
 
     sub = pd.DataFrame(index=df.index)
     sub["carencia_renda"] = score(df["pib_per_capita"], LOWER_IS_WORSE, log=True)
@@ -58,15 +58,15 @@ def build_index(
     sub["populacao_pequena"] = score(df["populacao_2022"], LOWER_IS_WORSE, log=True)
 
     # record what was missing before imputation, for transparency
-    ausentes = sub.isna()
-    df["imputados"] = ausentes.apply(lambda linha: [c for c in sub.columns if linha[c]], axis=1)
+    missing = sub.isna()
+    df["imputados"] = missing.apply(lambda linha: [c for c in sub.columns if linha[c]], axis=1)
     sub = sub.fillna(0.5)
 
-    ip_bruto = sum(sub[col] * peso for col, peso in pesos.items())
-    df["indice_penumbra"] = _scale_0_100(ip_bruto)
+    raw_score = sum(sub[col] * peso for col, peso in weights.items())
+    df["indice_penumbra"] = _scale_0_100(raw_score)
 
-    ip_iguais = sub[list(pesos)].mean(axis=1)
-    df["indice_penumbra_pesos_iguais"] = _scale_0_100(ip_iguais)
+    equal_score = sub[list(weights)].mean(axis=1)
+    df["indice_penumbra_pesos_iguais"] = _scale_0_100(equal_score)
 
     # method "first" guarantees unique ranks 1 to N with no ties or gaps
     df["rank_penumbra"] = df["indice_penumbra"].rank(ascending=False, method="first").astype(int)
