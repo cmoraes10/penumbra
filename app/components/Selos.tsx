@@ -1,4 +1,4 @@
-// Pequenos selos que sinalizam situacoes especiais de um municipio.
+// Small badge components that flag special conditions for a municipality.
 
 import { EyeOff, Info, Sprout } from "lucide-react";
 

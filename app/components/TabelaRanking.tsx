@@ -1,8 +1,8 @@
 "use client";
 
-// Tabela do ranking dos municipios. Permite buscar por nome, filtrar pela regiao
-// intermediaria e destacar so a zona cacaueira. A ordenacao padrao segue o
-// proprio indice, dos mais aos menos esquecidos.
+// Municipality ranking table. Supports name search, intermediate-region filter,
+// and a cocoa-zone highlight toggle. Default sort follows the index, most to
+// least forgotten.
 
 import Link from "next/link";
 import { useMemo, useState } from "react";

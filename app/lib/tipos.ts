@@ -51,7 +51,7 @@ export type IndiceData = {
   municipios: Municipio[];
 };
 
-// rotulos legiveis dos seis sinais, usados em telas e legendas
+// human-readable labels for the six signals, used in screens and legends
 export const ROTULO_SINAL: Record<keyof Subescores, string> = {
   carencia_renda: "Carência de renda",
   carencia_servico: "Carência de serviço",

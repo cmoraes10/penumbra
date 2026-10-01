@@ -11,13 +11,13 @@ body {
   color: #e7e9ee;
 }
 
-/* o mapa do Leaflet precisa ocupar a altura do seu contêiner */
+/* Leaflet map must fill its container height */
 .leaflet-container {
   background: #0f1117;
   font-family: inherit;
 }
 
-/* deixa os controles do Leaflet coerentes com o tema escuro */
+/* keep Leaflet controls consistent with the dark theme */
 .leaflet-bar a,
 .leaflet-control-zoom a {
   background: #171a22;

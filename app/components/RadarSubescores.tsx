@@ -1,8 +1,7 @@
 "use client";
 
-// Radar dos seis subescores de um municipio. Mostra de forma rapida POR QUE ele
-// esta na penumbra, se por carencia, por distancia, por falta de orcamento ou
-// por uma combinacao disso tudo.
+// Radar chart of the six sub-scores for a municipality. Shows at a glance why
+// it is in the penumbra: deprivation, distance, fiscal gap, or some combination.
 
 import {
   PolarAngleAxis,

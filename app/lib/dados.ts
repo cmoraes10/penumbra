@@ -1,6 +1,6 @@
-// Carregamento dos dados do indice. Roda no servidor, na geracao das paginas,
-// lendo o arquivo que o pipeline gravou em public/data. Como e leitura de
-// arquivo local, nunca vai parar no pacote enviado ao navegador.
+// Index data loader. Runs on the server during page generation, reading the
+// file the pipeline wrote to public/data. Because it is a local file read,
+// it never ends up in the browser bundle.
 
 import fs from "node:fs";
 import path from "node:path";

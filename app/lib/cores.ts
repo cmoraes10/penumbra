@@ -1,13 +1,13 @@
-// Escala de cor unica da Penumbra, compartilhada entre o mapa, o ranking e a
-// ficha, para que a mesma nota tenha sempre a mesma cor em todo o site.
+// Single colour scale for Penumbra, shared across the map, ranking, and
+// municipality profile so the same score always maps to the same colour.
 //
-// A ideia visual segue o nome. Notas baixas, municipios menos esquecidos,
-// aparecem claras. Conforme a nota sobe e o municipio afunda na penumbra, a cor
-// escurece rumo ao vermelho profundo.
+// The visual idea follows the name. Low scores (less forgotten) appear light.
+// As the score rises and the municipality sinks into the penumbra, the colour
+// darkens toward deep red.
 
 export type Classe = { limite: number; cor: string; rotulo: string };
 
-// seis classes por faixa de indice, do menos ao mais esquecido
+// six classes by index range, from least to most forgotten
 export const CLASSES: Classe[] = [
   { limite: 20, cor: "#fde68a", rotulo: "0 a 20" },
   { limite: 40, cor: "#fbbf24", rotulo: "20 a 40" },

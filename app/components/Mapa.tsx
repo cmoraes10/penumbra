@@ -1,8 +1,7 @@
 "use client";
 
-// Envolve o mapa num carregamento dinamico sem renderizacao no servidor, porque
-// o Leaflet depende do objeto window do navegador e quebraria se rodasse no
-// servidor durante a geracao das paginas.
+// Wraps the map in a dynamic import with no SSR because Leaflet depends on the
+// browser's window object and would break during server-side page generation.
 
 import dynamic from "next/dynamic";
 

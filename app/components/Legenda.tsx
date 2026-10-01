@@ -1,4 +1,4 @@
-// Legenda das faixas de cor do mapa.
+// Colour band legend for the map.
 
 import { CLASSES } from "@/lib/cores";
 
