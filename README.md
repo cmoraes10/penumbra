@@ -1,71 +1,74 @@
 # Penumbra
 
-Um índice de dados abertos que revela os municípios da Bahia mais esquecidos ao
-mesmo tempo pela renda, pelo serviço público, pelo orçamento e pela atenção. O
-foco é o interior, e em especial a zona cacaueira, com o gancho das eleições de
-2026.
+An open data index that surfaces the most overlooked municipalities in Bahia,
+measured across income, public services, fiscal capacity, and visibility. The
+focus is the interior, particularly the cocoa-growing region, tied to the 2026
+elections.
 
-## De onde vem o nome
+## The name
 
-Penumbra é a faixa de meia-luz entre a sombra total e a claridade plena. Não é o
-breu, onde nada se vê, nem a luz cheia do holofote, onde tudo aparece. É o
-entremeio, o lugar onde alguma coisa existe mas quase ninguém repara. Foi esse
-estado que o projeto quis nomear. Os municípios que o índice ilumina não são
-invisíveis por decreto, estão ali, com nome, código e gente, mas vivem numa zona
-cinzenta de atenção pública, longe da manchete e da agenda de campanha. Há ainda
-o sentido astronômico, a penumbra é a borda de um eclipse, onde a luz é apenas
-parcialmente bloqueada. É essa borda que o projeto tenta mapear.
+Penumbra is the band of half-light between full shadow and full brightness. Not
+the black where nothing is seen, nor the spotlight where everything appears. It
+is the in-between, the place where something exists but almost no one notices.
+That is what the project names. The municipalities the index surfaces are not
+invisible by decree. They are there, with a name, a code, and people, but they
+live in a grey zone of public attention, far from the headline and the campaign
+trail. There is also the astronomical sense: the penumbra is the edge of an
+eclipse, where light is only partially blocked. That is the border this project
+tries to map.
 
-## A zona cacaueira
+## The cocoa zone
 
-O coração do projeto é o sul da Bahia. A região do cacau já foi das mais ricas do
-país e afundou no esquecimento a partir do fim dos anos 1980, quando a praga da
-vassoura-de-bruxa arrasou a lavoura. Existe até hoje uma controvérsia, defendida
-por parte dos produtores e pesquisadores e alvo de investigação, de que o fungo
-teria sido introduzido de propósito. O projeto não toma partido nessa disputa. O
-que ele faz é medir, com dados, o tamanho da sombra em que a região acabou.
+The heart of the project is southern Bahia. The cocoa region was once among the
+wealthiest in the country and sank into neglect from the late 1980s onward,
+when the witches'-broom plague devastated the crop. A controversy persists,
+defended by some producers and researchers and still under investigation, that
+the fungus was introduced deliberately. This project takes no side in that
+dispute. What it does is measure, with data, the depth of the shadow the region
+ended up in.
 
-## Como o índice funciona
+## How the index works
 
-Cada município recebe uma nota de 0 a 100. Quanto maior, mais fundo na penumbra.
-A nota vem de seis sinais, agrupados em três ideias.
+Each municipality receives a score from 0 to 100. The higher the score, the
+deeper in the penumbra. The score comes from six signals grouped into three
+ideas.
 
-A carência da necessidade, medida pela renda por habitante e pela combinação de
-IDHM, IDEB e mortalidade infantil. A falta de orçamento próprio, medida pela
-autonomia fiscal, o quanto a cidade arrecada por conta própria em vez de depender
-de repasse. E a invisibilidade, medida pela distância até a capital, pela baixa
-densidade e pela população pequena.
+Need deprivation, measured by per-capita income and the combination of HDI,
+IDEB, and infant mortality. Fiscal gap, measured by fiscal autonomy, how much
+the municipality raises on its own instead of relying on federal transfers. And
+invisibility, measured by distance to the state capital, low population density,
+and small population size.
 
-Cada sinal vira um percentil dentro do conjunto dos municípios, o que torna o
-índice resistente a casos extremos como Salvador. Um dado que falta recebe o
-valor mediano, nunca o pior. Já um município que não prestou contas ao Tesouro
-recebe nota alta no sinal de orçamento, porque a falta de transparência é, ela
-mesma, um sinal de penumbra. Os pesos ficam versionados em
-`pipeline/config/pesos.json` e o site também mostra uma versão com todos os
-sinais valendo o mesmo, como teste de sensibilidade.
+Each signal becomes a percentile within the full set of municipalities, which
+makes the index resistant to extreme cases like Salvador. A missing data point
+receives the median value, never the worst. A municipality that did not report
+to the Treasury receives a high score on the fiscal signal, because a lack of
+transparency is itself a sign of penumbra. Weights are versioned in
+`pipeline/config/pesos.json` and the site also shows a version with equal
+weights as a sensitivity check.
 
-## Fontes
+## Sources
 
-Todos os dados são públicos e por município, chaveados pelo código IBGE.
+All data is public and by municipality, keyed by the IBGE code.
 
-- IBGE, lista de municípios, malha territorial, Censo 2022 e PIB dos municípios
-- IPEA, Atlas do Desenvolvimento Humano, IDHM e mortalidade infantil
-- INEP, IDEB dos anos iniciais
-- Tesouro Nacional, SICONFI, receitas, despesas e investimento
+- IBGE, municipality list, territorial mesh, 2022 Census, and municipal GDP
+- IPEA, Human Development Atlas, HDI, and infant mortality
+- INEP, IDEB for early primary education
+- National Treasury, SICONFI, revenue, expenditure, and investment
 
-## Estrutura
+## Structure
 
 ```
-pipeline/   coleta os dados abertos e gera o índice (Python)
-  src/      um coletor por fonte, além de normalização e cálculo
-  config/   fontes e pesos, versionados
-app/        site que mostra o mapa, o ranking e a ficha (Next.js)
-  public/data/  índice.json e municipios.geojson, consumidos pelo site
+pipeline/   collects the open data and builds the index (Python)
+  src/      one collector per source, plus normalization and scoring
+  config/   sources and weights, versioned
+app/        site that shows the map, ranking, and municipality profile (Next.js)
+  public/data/  indice.json and municipios.geojson, consumed by the site
 ```
 
-## Como rodar
+## Run
 
-O pipeline gera os dados. Testado com Python 3.12.
+The pipeline generates the data. Tested with Python 3.12.
 
 ```bash
 cd pipeline
@@ -74,7 +77,7 @@ pip install -r requirements.txt
 python run.py
 ```
 
-O site mostra os dados. Testado com Node 20.
+The site displays the data. Tested with Node 20.
 
 ```bash
 cd app
@@ -84,16 +87,18 @@ npm run dev
 
 ## Deploy
 
-O site sobe na Vercel apontando o diretório raiz para `app`. Os dados já vão
-versionados em `app/public/data`, então o deploy não depende de rodar o pipeline.
+The site deploys on Vercel pointing the root directory to `app`. The data files
+are versioned in `app/public/data`, so deployment does not depend on running
+the pipeline.
 
-## Aviso
+## Note
 
-Projeto independente e sem vínculo partidário. Não diz em quem votar. Reúne dados
-públicos para ampliar o campo de visão às vésperas das eleições de 2026, quando o
-interior costuma ficar fora do roteiro. O índice não substitui o conhecimento de
-quem vive no lugar, apenas devolve contorno a quem estava na meia-luz.
+Independent project with no political affiliation. It does not say who to vote
+for. It brings together public data to widen the field of view ahead of the 2026
+elections, when the interior tends to fall off the campaign map. The index does
+not replace the knowledge of people who live there. It only returns shape to
+what was in the half-light.
 
-## Autor
+## License
 
-Feito por Cauã Moraes. Conheça outros projetos em [mowaveone.com](https://mowaveone.com).
+MIT.
