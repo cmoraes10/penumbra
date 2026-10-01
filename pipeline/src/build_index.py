@@ -1,28 +1,28 @@
 """
-Construcao do Indice de Penumbra.
+Penumbra index builder.
 
-Aqui as pecas se juntam. Todos os indicadores coletados sao costurados pelo
-codigo IBGE, viram os seis subescores da metodologia, e a soma ponderada deles
-produz a nota final de 0 a 100. Quanto maior a nota, mais fundo o municipio
-esta na penumbra.
+This is where the pieces come together. All collected indicators are joined by
+IBGE code, turned into the six sub-scores of the methodology, and their weighted
+sum produces the final 0-to-100 score. The higher the score, the deeper the
+municipality is in the penumbra.
 
-Duas decisoes importantes moram neste modulo. Um subindicador ausente recebe o
-escore mediano de 0.5, para nao punir a cidade pela falta do dado. Ja o
-municipio que nao prestou contas ao Tesouro recebe escore alto no sinal de gap,
-porque nao ser transparente e, em si, um sinal de penumbra.
+Two design decisions live here. A missing sub-indicator receives the median
+score of 0.5, so the municipality is not penalised for missing data. A
+municipality that did not report to the Treasury receives a high score on the
+fiscal gap signal, because non-transparency is itself a sign of penumbra.
 """
 
 from __future__ import annotations
 
 import pandas as pd
 
-from .normalize import MAIOR_PIOR, MENOR_PIOR, escore, media_disponivel, minmax
+from .normalize import HIGHER_IS_WORSE, LOWER_IS_WORSE, score, row_mean, minmax
 
-# escore de gap para quem nao enviou a declaracao de contas ao Tesouro
-OPACIDADE = 0.85
+# opacity score assigned to municipalities that did not file a Treasury declaration
+OPACITY_SCORE = 0.85
 
 
-def constroi_indice(
+def build_index(
     base: pd.DataFrame,
     censo_pib: pd.DataFrame,
     ipea: pd.DataFrame,
@@ -31,44 +31,44 @@ def constroi_indice(
     distancias: dict[str, float],
     pesos: dict[str, float],
 ) -> pd.DataFrame:
-    """Devolve a tabela final dos municipios com indice, subescores e sinalizacoes."""
+    """Returns the final municipality table with index, sub-scores, and flags."""
     df = base.join([censo_pib, ipea, ideb, financas], how="left")
     df["distancia_capital_km"] = pd.Series(distancias)
 
     sub = pd.DataFrame(index=df.index)
-    sub["carencia_renda"] = escore(df["pib_per_capita"], MENOR_PIOR, log=True)
+    sub["carencia_renda"] = score(df["pib_per_capita"], LOWER_IS_WORSE, log=True)
 
     servico = pd.DataFrame(
         {
-            "idhm": escore(df.get("idhm_2010"), MENOR_PIOR),
-            "mortalidade": escore(df.get("mortalidade_infantil_2010"), MAIOR_PIOR),
-            "ideb": escore(df["ideb_ai_2023"], MENOR_PIOR)
+            "idhm": score(df.get("idhm_2010"), LOWER_IS_WORSE),
+            "mortalidade": score(df.get("mortalidade_infantil_2010"), HIGHER_IS_WORSE),
+            "ideb": score(df["ideb_ai_2023"], LOWER_IS_WORSE)
             if "ideb_ai_2023" in df.columns
             else pd.Series(index=df.index, dtype=float),
         }
     )
-    sub["carencia_servico"] = media_disponivel(servico)
+    sub["carencia_servico"] = row_mean(servico)
 
-    gap = escore(df.get("autonomia_fiscal"), MENOR_PIOR)
+    gap = score(df.get("autonomia_fiscal"), LOWER_IS_WORSE)
     enviou = df["enviou_dca"].fillna(False).astype(bool)
-    sub["gap_capacidade_orcamentaria"] = gap.mask(~enviou, OPACIDADE)
+    sub["gap_capacidade_orcamentaria"] = gap.mask(~enviou, OPACITY_SCORE)
 
     sub["distancia_capital"] = minmax(df["distancia_capital_km"])
-    sub["densidade_baixa"] = escore(df["densidade_hab_km2"], MENOR_PIOR)
-    sub["populacao_pequena"] = escore(df["populacao_2022"], MENOR_PIOR, log=True)
+    sub["densidade_baixa"] = score(df["densidade_hab_km2"], LOWER_IS_WORSE)
+    sub["populacao_pequena"] = score(df["populacao_2022"], LOWER_IS_WORSE, log=True)
 
-    # registra o que ficou ausente antes de imputar, para transparencia
+    # record what was missing before imputation, for transparency
     ausentes = sub.isna()
     df["imputados"] = ausentes.apply(lambda linha: [c for c in sub.columns if linha[c]], axis=1)
     sub = sub.fillna(0.5)
 
     ip_bruto = sum(sub[col] * peso for col, peso in pesos.items())
-    df["indice_penumbra"] = _escala_0_100(ip_bruto)
+    df["indice_penumbra"] = _scale_0_100(ip_bruto)
 
     ip_iguais = sub[list(pesos)].mean(axis=1)
-    df["indice_penumbra_pesos_iguais"] = _escala_0_100(ip_iguais)
+    df["indice_penumbra_pesos_iguais"] = _scale_0_100(ip_iguais)
 
-    # method "first" garante posicoes unicas de 1 a N, sem empate nem furo
+    # method "first" guarantees unique ranks 1 to N with no ties or gaps
     df["rank_penumbra"] = df["indice_penumbra"].rank(ascending=False, method="first").astype(int)
 
     for col in sub.columns:
@@ -77,8 +77,8 @@ def constroi_indice(
     return df.sort_values("rank_penumbra")
 
 
-def _escala_0_100(serie: pd.Series) -> pd.Series:
-    """Reescala uma serie para o intervalo de 0 a 100."""
+def _scale_0_100(serie: pd.Series) -> pd.Series:
+    """Rescales a series to the 0-to-100 range."""
     baixo, alto = serie.min(), serie.max()
     if alto == baixo:
         return pd.Series(50.0, index=serie.index)

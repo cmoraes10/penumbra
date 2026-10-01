@@ -1,18 +1,17 @@
 """
-Coletor dos indicadores do IBGE via API de agregados (SIDRA).
+IBGE SIDRA collector.
 
-Traz do Censo de 2022 a populacao, a area e a densidade de cada municipio, e do
-levantamento de contas o PIB municipal. O PIB per capita nao existe pronto na
-API, entao ele e derivado aqui, dividindo o PIB pela populacao. Densidade
-tambem e recalculada a partir de populacao e area para ficar coerente com o ano
-do Censo.
+Fetches population, area, and density from the 2022 Census and municipal GDP
+from the national accounts. GDP per capita is not available pre-computed in the
+API, so it is derived here by dividing GDP by population. Density is also
+recalculated from population and area for consistency with the Census year.
 """
 
 from __future__ import annotations
 
 import pandas as pd
 
-from .comum import carrega_config, codigo_ibge, get_json
+from .comum import load_config, ibge_code, get_json
 
 BASE = "https://servicodados.ibge.gov.br/api/v3/agregados"
 
@@ -23,12 +22,12 @@ def _url_agregado(agregado: str, periodo: str, variaveis: str, uf_codigo: str) -
 
 
 def _extrai_series(resposta: list, periodo: str) -> dict[str, dict[str, float]]:
-    """Le a resposta de agregados e devolve {variavel_id: {cod_ibge: valor}}."""
+    """Reads the aggregates response and returns {variable_id: {ibge_code: value}}."""
     saida: dict[str, dict[str, float]] = {}
     for variavel in resposta:
         valores: dict[str, float] = {}
         for serie in variavel["resultados"][0]["series"]:
-            cod = codigo_ibge(serie["localidade"]["id"])
+            cod = ibge_code(serie["localidade"]["id"])
             bruto = serie["serie"].get(periodo)
             valores[cod] = _para_numero(bruto)
         saida[str(variavel["id"])] = valores
@@ -36,7 +35,7 @@ def _extrai_series(resposta: list, periodo: str) -> dict[str, dict[str, float]]:
 
 
 def _para_numero(valor) -> float | None:
-    """Converte o valor textual da SIDRA em numero, tratando os marcadores de vazio."""
+    """Converts a SIDRA text value to a number, handling empty markers."""
     if valor in (None, "-", "...", "..", "X"):
         return None
     try:
@@ -45,8 +44,8 @@ def _para_numero(valor) -> float | None:
         return None
 
 
-def coleta_censo_e_pib(config: dict) -> pd.DataFrame:
-    """Devolve populacao, area, densidade, PIB e PIB per capita por municipio."""
+def fetch_census_and_gdp(config: dict) -> pd.DataFrame:
+    """Returns population, area, density, GDP, and GDP per capita by municipality."""
     uf_codigo = config["uf_codigo"]
     censo = config["ibge"]["sidra_censo2022"]
     pib = config["ibge"]["sidra_pib"]
@@ -57,7 +56,7 @@ def coleta_censo_e_pib(config: dict) -> pd.DataFrame:
     resp_pib = get_json(_url_agregado(pib["agregado"], pib["periodo"], pib["variavel"], uf_codigo))
     series_pib = _extrai_series(resp_pib, pib["periodo"])
 
-    # variaveis do agregado 4714: 93 populacao, 6318 area, 614 densidade
+    # aggregate 4714 variables: 93 population, 6318 area, 614 density
     populacao = series_censo.get("93", {})
     area = series_censo.get("6318", {})
     densidade = series_censo.get("614", {})
@@ -67,7 +66,7 @@ def coleta_censo_e_pib(config: dict) -> pd.DataFrame:
     for cod, pop in populacao.items():
         a = area.get(cod)
         pib_mil = pib_total.get(cod)
-        # PIB da SIDRA vem em mil reais; per capita em reais cheios
+        # SIDRA GDP is in thousands of BRL; per capita is in full BRL
         pib_pc = (pib_mil * 1000 / pop) if (pib_mil and pop) else None
         dens = densidade.get(cod)
         if dens is None and pop and a:
@@ -86,10 +85,10 @@ def coleta_censo_e_pib(config: dict) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    config = carrega_config("fontes.json")
-    tabela = coleta_censo_e_pib(config)
-    print(f"linhas: {len(tabela)}")
-    print(f"faltando populacao: {tabela['populacao_2022'].isna().sum()}")
-    print(f"faltando pib per capita: {tabela['pib_per_capita'].isna().sum()}")
+    config = load_config("fontes.json")
+    tabela = fetch_census_and_gdp(config)
+    print(f"rows: {len(tabela)}")
+    print(f"missing population: {tabela['populacao_2022'].isna().sum()}")
+    print(f"missing gdp per capita: {tabela['pib_per_capita'].isna().sum()}")
     print(tabela.sort_values("pib_per_capita", ascending=False).head(3))
     print(tabela.sort_values("pib_per_capita").head(3))

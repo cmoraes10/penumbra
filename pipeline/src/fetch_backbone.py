@@ -1,21 +1,21 @@
 """
-Coletor da espinha dorsal da Penumbra.
+Backbone collector for Penumbra.
 
-Puxa da API de localidades do IBGE a lista de municipios da UF configurada e
-monta a tabela base do projeto, indexada pelo codigo IBGE. Todas as outras
-fontes vao pendurar seus indicadores nessa tabela. Aqui tambem marcamos quais
-municipios pertencem a zona cacaueira, o recorte que da nome e alma ao projeto.
+Pulls the municipality list for the configured state from the IBGE localities
+API and builds the base table the project is indexed on. All other sources hang
+their indicators off this table. This module also flags which municipalities
+belong to the cocoa zone, the regional focus that gives the project its name.
 """
 
 from __future__ import annotations
 
 import pandas as pd
 
-from .comum import carrega_config, codigo_ibge, get_json
+from .comum import load_config, ibge_code, get_json
 
 
-def coleta_municipios(config: dict) -> pd.DataFrame:
-    """Devolve um DataFrame com um municipio por linha, indexado pelo codigo IBGE."""
+def fetch_municipalities(config: dict) -> pd.DataFrame:
+    """Returns a DataFrame with one municipality per row, indexed by IBGE code."""
     url = config["ibge"]["localidades_municipios"].format(uf=config["uf"])
     bruto = get_json(url)
 
@@ -29,7 +29,7 @@ def coleta_municipios(config: dict) -> pd.DataFrame:
         nome_micro = micro["nome"]
         linhas.append(
             {
-                "cod_ibge": codigo_ibge(item["id"]),
+                "cod_ibge": ibge_code(item["id"]),
                 "nome": item["nome"],
                 "microrregiao": nome_micro,
                 "mesorregiao": meso["nome"],
@@ -44,10 +44,10 @@ def coleta_municipios(config: dict) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    config = carrega_config("fontes.json")
-    tabela = coleta_municipios(config)
-    print(f"municipios: {len(tabela)}")
-    print(f"na zona cacaueira: {int(tabela['zona_cacaueira'].sum())}")
+    config = load_config("fontes.json")
+    tabela = fetch_municipalities(config)
+    print(f"municipalities: {len(tabela)}")
+    print(f"in cocoa zone: {int(tabela['zona_cacaueira'].sum())}")
     print(tabela.head())
-    print("\nmicrorregioes com cacau marcado:")
+    print("\nmicro-regions with cocoa flag:")
     print(tabela[tabela["zona_cacaueira"]]["microrregiao"].value_counts())

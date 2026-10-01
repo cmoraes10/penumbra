@@ -1,15 +1,16 @@
 """
-Coletor das financas municipais no SICONFI (Tesouro Nacional).
+SICONFI collector (National Treasury).
 
-Para cada municipio busca a Declaracao de Contas Anuais e extrai duas coisas.
-Do anexo de receitas tira a receita total e a receita tributaria propria, cuja
-razao mede a autonomia fiscal, o quanto a cidade se sustenta sem depender de
-repasse. Do anexo de despesas tira o investimento, a fatia do orcamento que
-vira obra e servico novo.
+For each municipality, fetches the Annual Account Declaration and extracts two
+things. From the revenue annex it takes total revenue and own-source tax
+revenue, whose ratio measures fiscal autonomy: how much the municipality
+sustains itself without relying on federal transfers. From the expenditure annex
+it takes investment, the share of the budget that becomes new works and
+services.
 
-Sao dois pedidos por municipio, entao cada resposta fica guardada em cache. Um
-municipio que nao enviou a declaracao ao Tesouro volta vazio, e essa ausencia e
-tratada mais adiante como sinal de opacidade, nao como erro.
+Two requests per municipality, so each response is cached to disk. A
+municipality that did not file a declaration returns empty, and that absence is
+handled downstream as an opacity signal, not an error.
 """
 
 from __future__ import annotations
@@ -19,33 +20,33 @@ import time
 
 import pandas as pd
 
-from .comum import DADOS_BRUTOS, carrega_config, codigo_ibge, get_json
+from .comum import RAW_DATA, load_config, ibge_code, get_json
 
-CACHE = DADOS_BRUTOS / "siconfi"
+CACHE = RAW_DATA / "siconfi"
 
 CONTA_RECEITA_TOTAL = "ReceitasExcetoIntraOrcamentarias"
-CONTA_RECEITA_PROPRIA = "RO1.1.0.0.00.0.0"  # Impostos, Taxas e Contribuicoes de Melhoria
-CONTA_INVESTIMENTO = "DO4.4.00.00.00.00"  # 4.4.00.00.00 - Investimentos
+CONTA_RECEITA_PROPRIA = "RO1.1.0.0.00.0.0"  # taxes, fees, and improvement contributions
+CONTA_INVESTIMENTO = "DO4.4.00.00.00.00"    # 4.4 investments
 COLUNA_RECEITA = "Receitas Brutas Realizadas"
 COLUNAS_DESPESA = ("Despesas Liquidadas", "Despesas Pagas", "Despesas Empenhadas")
 
 
-def coleta_entes_uf(config: dict) -> dict[str, float]:
-    """Devolve {cod_ibge: populacao} apenas dos municipios da UF configurada."""
+def fetch_state_entities(config: dict) -> dict[str, float]:
+    """Returns {ibge_code: population} for municipalities in the configured state."""
     bruto = get_json(config["siconfi"]["entes"], params={"uf": config["uf"]})
     uf_codigo = config["uf_codigo"]
     entes = {}
     for item in bruto.get("items", []):
         if item.get("esfera") != "M":
             continue
-        cod = codigo_ibge(item.get("cod_ibge"))
+        cod = ibge_code(item.get("cod_ibge"))
         if cod.startswith(uf_codigo):
             entes[cod] = item.get("populacao")
     return entes
 
 
 def _dca(config: dict, id_ente: str, anexo: str, rotulo: str) -> list[dict]:
-    """Busca um anexo da DCA de um municipio, com cache em disco."""
+    """Fetches a DCA annex for a municipality, with disk cache."""
     CACHE.mkdir(parents=True, exist_ok=True)
     arquivo = CACHE / f"{rotulo}_{id_ente}.json"
     if arquivo.exists():
@@ -60,12 +61,12 @@ def _dca(config: dict, id_ente: str, anexo: str, rotulo: str) -> list[dict]:
     items = dados.get("items", [])
     with open(arquivo, "w", encoding="utf-8") as f:
         json.dump(items, f, ensure_ascii=False)
-    time.sleep(0.15)  # gentileza com a API
+    time.sleep(0.15)  # rate-limit courtesy
     return items
 
 
 def _valor(items: list[dict], cod_conta: str, colunas) -> float | None:
-    """Encontra o valor de uma conta, testando as colunas na ordem de preferencia."""
+    """Finds the value for an account, trying columns in preference order."""
     if isinstance(colunas, str):
         colunas = (colunas,)
     for coluna in colunas:
@@ -78,9 +79,9 @@ def _valor(items: list[dict], cod_conta: str, colunas) -> float | None:
     return None
 
 
-def coleta_financas(config: dict, municipios: list[str] | None = None) -> pd.DataFrame:
-    """Devolve receita, autonomia fiscal e investimento per capita por municipio."""
-    entes = coleta_entes_uf(config)
+def fetch_finances(config: dict, municipios: list[str] | None = None) -> pd.DataFrame:
+    """Returns revenue, fiscal autonomy, and per-capita investment by municipality."""
+    entes = fetch_state_entities(config)
     codigos = municipios or list(entes)
 
     conf = config["siconfi"]
@@ -114,7 +115,7 @@ def coleta_financas(config: dict, municipios: list[str] | None = None) -> pd.Dat
 
 
 if __name__ == "__main__":
-    config = carrega_config("fontes.json")
-    amostra = ["2913606", "2900306", "2916500"]  # Ilheus, Acajutiba, um de baixo IDHM
-    tabela = coleta_financas(config, amostra)
+    config = load_config("fontes.json")
+    amostra = ["2913606", "2900306", "2916500"]  # Ilhéus, Acajutiba, one with low HDI
+    tabela = fetch_finances(config, amostra)
     print(tabela)

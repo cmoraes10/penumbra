@@ -1,11 +1,12 @@
 """
-Orquestrador do pipeline da Penumbra.
+Pipeline orchestrator for Penumbra.
 
-Roda os coletores na ordem certa, monta o indice e grava os dois artefatos que o
-site consome. Tambem escreve um pequeno relatorio de qualidade, dizendo quantos
-municipios ficaram sem cada dado, para ninguem confiar no numero as cegas.
+Runs the collectors in the right order, builds the index, and writes the two
+artifacts the site consumes. Also writes a small quality report showing how
+many municipalities are missing each indicator, so no one trusts the numbers
+blindly.
 
-Uso, a partir da pasta pipeline:
+Usage, from the pipeline directory:
 
     python run.py
 """
@@ -16,15 +17,15 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
-from src.build_index import constroi_indice
-from src.comum import DADOS_PROCESSADOS, carrega_config
-from src.export import exporta_geojson, exporta_indice
-from src.fetch_backbone import coleta_municipios
-from src.fetch_ibge_sidra import coleta_censo_e_pib
-from src.fetch_inep_ideb import coleta_ideb
-from src.fetch_ipea import coleta_idhm_mortalidade
-from src.fetch_siconfi import coleta_financas
-from src.geometry import calcula_distancias, malha_simplificada
+from src.build_index import build_index
+from src.comum import PROCESSED_DATA, load_config
+from src.export import export_geojson, export_index
+from src.fetch_backbone import fetch_municipalities
+from src.fetch_ibge_sidra import fetch_census_and_gdp
+from src.fetch_inep_ideb import fetch_ideb
+from src.fetch_ipea import fetch_hdi_mortality
+from src.fetch_siconfi import fetch_finances
+from src.geometry import compute_distances, simplified_mesh
 
 
 FONTES = [
@@ -36,9 +37,9 @@ FONTES = [
 ]
 
 
-def _relatorio_qualidade(df: pd.DataFrame) -> None:
-    """Conta valores ausentes por indicador e grava um csv de acompanhamento."""
-    colunas = [
+def _quality_report(df: pd.DataFrame) -> None:
+    """Counts missing values per indicator and writes a tracking CSV."""
+    columns = [
         "populacao_2022",
         "pib_per_capita",
         "idhm_2010",
@@ -48,49 +49,49 @@ def _relatorio_qualidade(df: pd.DataFrame) -> None:
         "investimento_pc",
         "distancia_capital_km",
     ]
-    presentes = [c for c in colunas if c in df.columns]
-    faltantes = df[presentes].isna().sum()
-    relatorio = pd.DataFrame({"faltando": faltantes, "total": len(df)})
-    DADOS_PROCESSADOS.mkdir(parents=True, exist_ok=True)
-    relatorio.to_csv(DADOS_PROCESSADOS / "relatorio_qualidade.csv")
-    print("\nqualidade dos dados (municipios sem o indicador):")
-    print(relatorio.to_string())
+    present = [c for c in columns if c in df.columns]
+    missing = df[present].isna().sum()
+    report = pd.DataFrame({"missing": missing, "total": len(df)})
+    PROCESSED_DATA.mkdir(parents=True, exist_ok=True)
+    report.to_csv(PROCESSED_DATA / "relatorio_qualidade.csv")
+    print("\ndata quality (municipalities missing each indicator):")
+    print(report.to_string())
 
 
 def main() -> None:
-    config = carrega_config("fontes.json")
-    pesos = carrega_config("pesos.json")
+    config = load_config("fontes.json")
+    pesos = load_config("pesos.json")
 
-    print("1/7 municipios (backbone)")
-    base = coleta_municipios(config)
+    print("1/7 municipalities (backbone)")
+    base = fetch_municipalities(config)
 
-    print("2/7 populacao, area, densidade e PIB (IBGE)")
-    censo_pib = coleta_censo_e_pib(config)
+    print("2/7 population, area, density, and GDP (IBGE)")
+    censo_pib = fetch_census_and_gdp(config)
 
-    print("3/7 IDHM e mortalidade (IPEA)")
-    ipea = coleta_idhm_mortalidade(config)
+    print("3/7 HDI and infant mortality (IPEA)")
+    ipea = fetch_hdi_mortality(config)
 
     print("4/7 IDEB (INEP)")
-    ideb = coleta_ideb(config)
+    ideb = fetch_ideb(config)
 
-    print("5/7 financas municipais (SICONFI)")
-    financas = coleta_financas(config)
+    print("5/7 municipal finances (SICONFI)")
+    financas = fetch_finances(config)
 
-    print("6/7 geometria e distancia ate a capital")
-    distancias = calcula_distancias(config)
-    malha = malha_simplificada(config)
+    print("6/7 geometry and distance to capital")
+    distancias = compute_distances(config)
+    malha = simplified_mesh(config)
 
-    print("7/7 montando o indice e exportando")
-    df = constroi_indice(base, censo_pib, ipea, ideb, financas, distancias, pesos)
+    print("7/7 building index and exporting")
+    df = build_index(base, censo_pib, ipea, ideb, financas, distancias, pesos)
 
     gerado_em = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    caminho_indice = exporta_indice(df, pesos, config, gerado_em, FONTES)
-    caminho_geojson = exporta_geojson(df, malha)
+    caminho_indice = export_index(df, pesos, config, gerado_em, FONTES)
+    caminho_geojson = export_geojson(df, malha)
 
-    _relatorio_qualidade(df)
-    print(f"\nindice: {caminho_indice}")
+    _quality_report(df)
+    print(f"\nindex: {caminho_indice}")
     print(f"geojson: {caminho_geojson}")
-    print("\ntop 5 na penumbra:")
+    print("\ntop 5 in penumbra:")
     print(df[["nome", "indice_penumbra", "zona_cacaueira"]].head())
 
 

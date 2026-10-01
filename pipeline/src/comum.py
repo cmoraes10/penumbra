@@ -1,10 +1,9 @@
 """
-Utilidades compartilhadas pelo pipeline da Penumbra.
+Shared utilities for the Penumbra pipeline.
 
-Concentra o que todos os coletores precisam: leitura da configuracao, um cliente
-HTTP com repeticao e espera progressiva para aguentar instabilidade de API, o
-cache em disco dos downloads brutos e a padronizacao do codigo IBGE, que e a
-chave que costura todas as fontes.
+Centralises what every collector needs: config loading, an HTTP client with
+exponential-backoff retries to survive API instability, disk caching for raw
+downloads, and IBGE code normalisation, which is the key that joins all sources.
 """
 
 from __future__ import annotations
@@ -16,76 +15,74 @@ from typing import Any
 
 import requests
 
-RAIZ = Path(__file__).resolve().parent.parent
-CONFIG = RAIZ / "config"
-DADOS_BRUTOS = RAIZ / "data" / "raw"
-DADOS_PROCESSADOS = RAIZ / "data" / "processed"
+ROOT = Path(__file__).resolve().parent.parent
+CONFIG = ROOT / "config"
+RAW_DATA = ROOT / "data" / "raw"
+PROCESSED_DATA = ROOT / "data" / "processed"
 
-# alguns servidores publicos recusam requisicao sem um agente de navegador
-CABECALHO = {"User-Agent": "Mozilla/5.0 (Penumbra pipeline de dados abertos)"}
-
-
-def carrega_config(nome: str) -> dict:
-    """Le um arquivo JSON da pasta de configuracao."""
-    with open(CONFIG / nome, encoding="utf-8") as arquivo:
-        return json.load(arquivo)
+# some public servers reject requests without a browser user-agent
+HEADERS = {"User-Agent": "Mozilla/5.0 (Penumbra open data pipeline)"}
 
 
-def codigo_ibge(valor: Any) -> str:
-    """Padroniza qualquer codigo de municipio para string de sete digitos.
+def load_config(name: str) -> dict:
+    """Reads a JSON file from the config directory."""
+    with open(CONFIG / name, encoding="utf-8") as f:
+        return json.load(f)
 
-    A API de localidades devolve o codigo como numero inteiro, enquanto as
-    demais fontes usam texto. Sem essa padronizacao o cruzamento entre as
-    tabelas falha em silencio.
+
+def ibge_code(value: Any) -> str:
+    """Normalises any municipality code to a seven-digit string.
+
+    The localities API returns the code as an integer, while other sources use
+    text. Without this normalisation the cross-source join silently fails.
     """
-    return str(valor).strip().zfill(7)
+    return str(value).strip().zfill(7)
 
 
 def get_json(
     url: str,
     params: dict | None = None,
-    tentativas: int = 4,
-    espera_base: float = 1.5,
+    retries: int = 4,
+    base_wait: float = 1.5,
     timeout: int = 60,
 ) -> Any:
-    """Faz um GET e devolve JSON, repetindo com espera progressiva em caso de falha.
+    """GETs a URL and returns JSON, retrying with exponential backoff on failure.
 
-    Erros de rede ou respostas 429 e 5xx sao tratados como temporarios e a
-    funcao tenta de novo, dobrando a espera a cada rodada. Um 404 e definitivo e
-    sobe na hora.
+    Network errors and 429/5xx responses are treated as transient and retried,
+    doubling the wait each round. A 404 is permanent and raises immediately.
     """
-    ultimo_erro: Exception | None = None
-    for tentativa in range(tentativas):
+    last_error: Exception | None = None
+    for attempt in range(retries):
         try:
-            resposta = requests.get(url, params=params, headers=CABECALHO, timeout=timeout)
-            if resposta.status_code == 404:
-                resposta.raise_for_status()
-            if resposta.status_code in (429, 500, 502, 503, 504):
-                raise requests.HTTPError(f"status temporario {resposta.status_code}")
-            resposta.raise_for_status()
-            return resposta.json()
-        except (requests.RequestException, ValueError) as erro:
-            ultimo_erro = erro
-            if tentativa < tentativas - 1:
-                time.sleep(espera_base * (2 ** tentativa))
-    raise RuntimeError(f"falha ao buscar {url}: {ultimo_erro}")
+            response = requests.get(url, params=params, headers=HEADERS, timeout=timeout)
+            if response.status_code == 404:
+                response.raise_for_status()
+            if response.status_code in (429, 500, 502, 503, 504):
+                raise requests.HTTPError(f"transient status {response.status_code}")
+            response.raise_for_status()
+            return response.json()
+        except (requests.RequestException, ValueError) as e:
+            last_error = e
+            if attempt < retries - 1:
+                time.sleep(base_wait * (2 ** attempt))
+    raise RuntimeError(f"failed to fetch {url}: {last_error}")
 
 
-def baixa_arquivo(url: str, destino: Path, forcar: bool = False, timeout: int = 180) -> Path:
-    """Baixa um arquivo grande para o cache local, reaproveitando se ja existir."""
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    if destino.exists() and not forcar:
-        return destino
-    with requests.get(url, headers=CABECALHO, timeout=timeout, stream=True) as resposta:
-        resposta.raise_for_status()
-        with open(destino, "wb") as saida:
-            for pedaco in resposta.iter_content(chunk_size=1 << 16):
-                saida.write(pedaco)
-    return destino
+def download_file(url: str, dest: Path, force: bool = False, timeout: int = 180) -> Path:
+    """Downloads a large file to local cache, reusing it if it already exists."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists() and not force:
+        return dest
+    with requests.get(url, headers=HEADERS, timeout=timeout, stream=True) as response:
+        response.raise_for_status()
+        with open(dest, "wb") as f:
+            for chunk in response.iter_content(chunk_size=1 << 16):
+                f.write(chunk)
+    return dest
 
 
-def salva_json(dados: Any, destino: Path) -> None:
-    """Grava JSON legivel, preservando acentos."""
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    with open(destino, "w", encoding="utf-8") as saida:
-        json.dump(dados, saida, ensure_ascii=False, indent=2)
+def save_json(data: Any, dest: Path) -> None:
+    """Writes JSON with human-readable formatting, preserving accents."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with open(dest, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
